@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/cloudinary/cloudinary-go/v2"
@@ -39,11 +38,17 @@ func main() {
 	app.Post("/", func(c *fiber.Ctx) error {
 		file, err := c.FormFile("file")
 
-		fmt.Println(file.Filename)
+		maxSize := int64(200 * 1024 * 1024)
 
 		if err != nil {
 			return c.JSON(fiber.Map{
 				"error": "multipart form error",
+			})
+		}
+
+		if file.Size > maxSize {
+			return c.JSON(fiber.Map{
+				"error": "max size",
 			})
 		}
 
