@@ -38,7 +38,7 @@ func main() {
 	app.Post("/", func(c *fiber.Ctx) error {
 		file, err := c.FormFile("file")
 
-		maxSize := int64(200 * 1024 * 1024)
+		maxSize := int64(300 * 1024 * 1024)
 
 		if err != nil {
 			return c.JSON(fiber.Map{
