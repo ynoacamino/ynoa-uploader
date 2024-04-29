@@ -29,7 +29,9 @@ func main() {
 		PORT = "3000"
 	}
 
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		BodyLimit: 300 * 1024 * 1024
+	})
 
 	app.Use(cors.New())
 
