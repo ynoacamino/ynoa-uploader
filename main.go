@@ -2,26 +2,33 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"os"
+	"time"
 
-	"github.com/cloudinary/cloudinary-go/v2"
-	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	_ "github.com/joho/godotenv/autoload"
 )
 
 func main() {
-	print("ping")
 	var (
-		CLOUD_NAME = os.Getenv("CLOUD_NAME")
-		API_KEY    = os.Getenv("API_KEY")
-		API_SECRET = os.Getenv("API_SECRET")
-		PORT       = os.Getenv("PORT")
+		R2_ENDPOINT           = "https://cde705ccd8ba0aec2e00e415023fef17.r2.cloudflarestorage.com"
+		AWS_BUCKET            = os.Getenv("AWS_BUCKET")
+		AWS_ACCESS_KEY_ID     = os.Getenv("AWS_ACCESS_KEY_ID")
+		AWS_SECRET_ACCESS_KEY = os.Getenv("AWS_SECRET_ACCESS_KEY")
+		PORT                  = os.Getenv("PORT")
 	)
 
-	if CLOUD_NAME == "" {
+	if AWS_BUCKET == "" || AWS_ACCESS_KEY_ID == "" || AWS_SECRET_ACCESS_KEY == "" {
 		panic("Enviroment variables not found")
 	}
 
@@ -36,6 +43,24 @@ func main() {
 	app.Use(cors.New())
 
 	app.Static("/", "./public")
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("auto"),
+		config.WithCredentialsProvider(aws.NewCredentialsCache(credentials.NewStaticCredentialsProvider(
+			AWS_ACCESS_KEY_ID,
+			AWS_SECRET_ACCESS_KEY,
+			"",
+		))),
+		config.WithEndpointResolver(aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
+			return aws.Endpoint{
+				URL: R2_ENDPOINT,
+			}, nil
+		})),
+	)
+	if err != nil {
+		panic("Error cargando la configuración de AWS: " + err.Error())
+	}
+	s3Client := s3.NewFromConfig(cfg)
 
 	app.Post("/", func(c *fiber.Ctx) error {
 		file, err := c.FormFile("file")
@@ -54,18 +79,36 @@ func main() {
 			})
 		}
 
-		cld, err := cloudinary.NewFromParams(CLOUD_NAME, API_KEY, API_SECRET)
+		src, err := file.Open()
 		if err != nil {
-			return err
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "No se puede abrir el archivo",
+			})
+		}
+		defer src.Close()
+
+		key := fmt.Sprintf("uploads/%d_", time.Now().Unix())
+
+		keyName := key + file.Filename
+
+		_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket: aws.String(AWS_BUCKET),
+			Key:    aws.String(keyName),
+			Body:   src,
+			ACL:    types.ObjectCannedACLPublicRead, // Hace el archivo accesible públicamente
+		})
+
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Error con R2",
+				"message": err.Error(),
+			})
 		}
 
-		res, err := cld.Upload.Upload(context.Background(), file, uploader.UploadParams{})
-		if err != nil {
-			return err
-		}
+		url := fmt.Sprintf("https://ynoa-uploader.ynoacamino.site/%s%s", key, url.PathEscape(file.Filename))
 
 		return c.JSON(fiber.Map{
-			"url": res.SecureURL,
+			"url": url,
 		})
 	})
 
