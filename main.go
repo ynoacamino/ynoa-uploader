@@ -92,10 +92,12 @@ func main() {
 		keyName := key + file.Filename
 
 		_, err = s3Client.PutObject(context.TODO(), &s3.PutObjectInput{
-			Bucket: aws.String(AWS_BUCKET),
-			Key:    aws.String(keyName),
-			Body:   src,
-			ACL:    types.ObjectCannedACLPublicRead, // Hace el archivo accesible públicamente
+			Bucket:             aws.String(AWS_BUCKET),
+			Key:                aws.String(keyName),
+			Body:               src,
+			ACL:                types.ObjectCannedACLPublicRead,
+			ContentDisposition: aws.String("inline"),
+			ContentType:        aws.String(file.Header.Get("Content-Type")),
 		})
 
 		if err != nil {
