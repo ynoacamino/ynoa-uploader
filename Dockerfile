@@ -1,5 +1,5 @@
 # Usa una imagen base oficial de Go
-FROM golang:1.21.5 AS builder
+FROM golang:alpine AS builder
 
 # Establece el directorio de trabajo
 WORKDIR /app
@@ -14,16 +14,16 @@ RUN go mod download
 COPY . .
 
 # Compila la aplicación
-RUN go build -o app ./main.go
+RUN go build -o main ./main.go
 
 # Usa una imagen más ligera para el contenedor final
 FROM alpine:latest
 
 # Copia el binario desde la etapa de construcción
-COPY --from=builder /app/app /app
+COPY --from=builder /app/main /app/
 
 # Exponer el puerto en el que tu aplicación escucha
 EXPOSE 3000
 
 # Comando para ejecutar la aplicación
-CMD ["/app"]
+CMD ["/app/main"]
