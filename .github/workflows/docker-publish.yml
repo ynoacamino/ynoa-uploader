@@ -19,21 +19,20 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Login to Github Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
-          registry: docker.io
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          username: ynoacamino
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
@@ -41,5 +40,5 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}:latest
-            docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.repository }}:${{ github.ref_name }}
-            docker.io/${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.repository }}:latest
+            ynoacamino/${{ github.repository }}:${{ github.ref_name }}
+            ynoacamino/${{ github.repository }}:latest
