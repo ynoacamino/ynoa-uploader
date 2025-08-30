@@ -107,7 +107,7 @@ func main() {
 			})
 		}
 
-		url := fmt.Sprintf("https://ynoa-uploader.ynoacamino.site/%s%s", key, url.PathEscape(file.Filename))
+		url := fmt.Sprintf("https://ynoa-uploader.ynoacamino.me/%s%s", key, url.PathEscape(file.Filename))
 
 		return c.JSON(fiber.Map{
 			"url": url,
